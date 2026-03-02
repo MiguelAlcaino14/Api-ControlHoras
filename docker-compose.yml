@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: controlhoras-db
+    restart: always
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: controlhoras
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-CambiarEstaClave123!}
+      POSTGRES_DB: controlhoras
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
