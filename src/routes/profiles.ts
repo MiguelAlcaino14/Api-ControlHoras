@@ -26,4 +26,12 @@ router.patch('/liberar/:id', async (req: Request, res: Response) => {
   });
 });
 
+router.get('/all', async (_req: Request, res: Response) => {
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id, nombre, email, rol, activo, is_released');
+  
+  if (error) return res.status(500).json({ error: error.message });
+  return res.status(200).json(data);
+});
 export default router;
