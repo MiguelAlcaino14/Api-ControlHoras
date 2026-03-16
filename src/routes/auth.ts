@@ -1,12 +1,26 @@
 import { Router, type Response } from 'express';
 import bcrypt from 'bcrypt';
+import rateLimit from 'express-rate-limit';
 import pool from '../lib/db.js';
-import { AuthRequest, authMiddleware, generateToken, generateRefreshToken } from '../middleware/auth.js';
+import {
+  AuthRequest, authMiddleware,
+  generateToken, generateRefreshToken, generateResetToken,
+  verifyRefreshToken, verifyResetToken,
+} from '../middleware/auth.js';
 
 const router = Router();
 
+// Rate limiting: máx 10 intentos cada 15 minutos por IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos, intenta más tarde' },
+});
+
 // POST /api/auth/login
-router.post('/login', async (req: AuthRequest, res: Response) => {
+router.post('/login', authLimiter, async (req: AuthRequest, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email y password son requeridos' });
@@ -47,8 +61,9 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
         activo: user.activo,
       },
     });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+  } catch (err) {
+    console.error('Error en login:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
@@ -60,16 +75,11 @@ router.post('/refresh', async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const jwt = await import('jsonwebtoken');
-    const payload = jwt.default.verify(refreshToken, process.env.JWT_SECRET || 'dev-secret') as any;
-
-    if (payload.type !== 'refresh') {
-      return res.status(401).json({ error: 'Token inválido' });
-    }
+    const { id } = verifyRefreshToken(refreshToken);
 
     const result = await pool.query(
       'SELECT id, nombre, email, rol, activo FROM usuarios WHERE id = $1',
-      [payload.id]
+      [id]
     );
 
     if (result.rows.length === 0 || !result.rows[0].activo) {
@@ -96,7 +106,7 @@ router.post('/refresh', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// GET /api/auth/me - obtener perfil del usuario autenticado
+// GET /api/auth/me
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
@@ -109,13 +119,14 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
 
     return res.status(200).json(result.rows[0]);
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+  } catch (err) {
+    console.error('Error en /me:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', async (req: AuthRequest, res: Response) => {
+router.post('/forgot-password', authLimiter, async (req: AuthRequest, res: Response) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({ error: 'Email es requerido' });
@@ -124,29 +135,21 @@ router.post('/forgot-password', async (req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query('SELECT id FROM usuarios WHERE email = $1', [email]);
 
-    // Siempre responder 200 para no revelar si el email existe
+    // Siempre responder igual para no revelar si el email existe
     if (result.rows.length === 0) {
       return res.status(200).json({ message: 'Si el email existe, se enviarán instrucciones' });
     }
 
-    // TODO: integrar envío de email con un servicio (SendGrid, Resend, etc.)
-    // Por ahora se genera un token de reset que dura 1 hora
-    const jwt = await import('jsonwebtoken');
-    const resetToken = jwt.default.sign(
-      { id: result.rows[0].id, type: 'reset' },
-      process.env.JWT_SECRET || 'dev-secret',
-      { expiresIn: '1h' }
-    );
+    const resetToken = generateResetToken(result.rows[0].id);
 
-    console.log(`[RESET TOKEN para ${email}]: ${resetToken}`);
+    // TODO: integrar envío de email (SendGrid, Resend, etc.)
+    // El token debe enviarse únicamente por email, nunca en la respuesta
+    console.log(`[RESET] Token generado para ${email}`); // Solo log sin el token
 
-    return res.status(200).json({
-      message: 'Si el email existe, se enviarán instrucciones',
-      // En desarrollo devolvemos el token; en producción quitar esto
-      ...(process.env.NODE_ENV !== 'production' && { resetToken }),
-    });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return res.status(200).json({ message: 'Si el email existe, se enviarán instrucciones' });
+  } catch (err) {
+    console.error('Error en forgot-password:', err);
+    return res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
@@ -158,16 +161,9 @@ router.post('/reset-password', async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const jwt = await import('jsonwebtoken');
-    const payload = jwt.default.verify(token, process.env.JWT_SECRET || 'dev-secret') as any;
-
-    if (payload.type !== 'reset') {
-      return res.status(401).json({ error: 'Token inválido' });
-    }
-
+    const { id } = verifyResetToken(token);
     const hash = await bcrypt.hash(password, 10);
-    await pool.query('UPDATE usuarios SET password_hash = $1 WHERE id = $2', [hash, payload.id]);
-
+    await pool.query('UPDATE usuarios SET password_hash = $1 WHERE id = $2', [hash, id]);
     return res.status(200).json({ message: 'Contraseña actualizada exitosamente' });
   } catch {
     return res.status(401).json({ error: 'Token inválido o expirado' });

@@ -1,7 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+function requireSecret(name: string, fallback?: string): string {
+  const val = process.env[name] || fallback;
+  if (!val || val.length < 32) {
+    throw new Error(`FATAL: ${name} debe estar definido y tener al menos 32 caracteres`);
+  }
+  return val;
+}
+
+const getJwtSecret = () => requireSecret('JWT_SECRET');
+const getRefreshSecret = () => requireSecret('JWT_REFRESH_SECRET', process.env.JWT_SECRET);
+const getResetSecret = () => requireSecret('JWT_RESET_SECRET', process.env.JWT_SECRET);
 
 export interface AuthRequest extends Request {
   user?: {
@@ -19,7 +29,11 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
 
   const token = header.split(' ')[1];
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { id: string; email: string; rol: string };
+    const payload = jwt.verify(token, getJwtSecret()) as unknown as { id: string; email: string; rol: string; type?: string };
+    if (payload.type) {
+      // Rechazar refresh/reset tokens usados como access tokens
+      return res.status(401).json({ error: 'Token inválido' });
+    }
     req.user = payload;
     next();
   } catch {
@@ -37,15 +51,35 @@ export function adminOnly(req: AuthRequest, res: Response, next: NextFunction) {
 export function generateToken(user: { id: string; email: string; rol: string }): string {
   return jwt.sign(
     { id: user.id, email: user.email, rol: user.rol },
-    JWT_SECRET,
-    { expiresIn: '24h' }
+    getJwtSecret(),
+    { expiresIn: '15m' }
   );
 }
 
 export function generateRefreshToken(user: { id: string }): string {
   return jwt.sign(
     { id: user.id, type: 'refresh' },
-    JWT_SECRET,
+    getRefreshSecret(),
     { expiresIn: '7d' }
   );
+}
+
+export function generateResetToken(userId: string): string {
+  return jwt.sign(
+    { id: userId, type: 'reset' },
+    getResetSecret(),
+    { expiresIn: '1h' }
+  );
+}
+
+export function verifyRefreshToken(token: string): { id: string } {
+  const payload = jwt.verify(token, getRefreshSecret()) as any;
+  if (payload.type !== 'refresh') throw new Error('Token inválido');
+  return { id: payload.id };
+}
+
+export function verifyResetToken(token: string): { id: string } {
+  const payload = jwt.verify(token, getResetSecret()) as any;
+  if (payload.type !== 'reset') throw new Error('Token inválido');
+  return { id: payload.id };
 }
