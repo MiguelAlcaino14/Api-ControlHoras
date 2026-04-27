@@ -18,6 +18,7 @@ pipelines:
               variables:
                 USER: 'root'
                 SERVER: $SERVER
+                SSH_KEY: $SSH_KEY
                 REMOTE_PATH: "/root/apps/$APP_NAME"
                 LOCAL_PATH: "image.tar.gz"
 
@@ -26,6 +27,7 @@ pipelines:
               variables:
                 SSH_USER: 'root'
                 SERVER: $SERVER
+                SSH_KEY: $SSH_KEY
                 COMMAND: |
                   set -e
 
