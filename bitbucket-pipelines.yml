@@ -30,13 +30,10 @@ pipelines:
 
               cd /root/apps/$APP_NAME
 
-              # generar .env correctamente
               printf "%s" "$ENV_FILE_BASE64" | base64 -d > .env
 
-              # cargar imagen
               docker load < image.tar.gz
 
-              # generar docker-compose dinámico
               cat > docker-compose.yml <<EOC
               version: "3.8"
 
@@ -49,11 +46,11 @@ pipelines:
                     - .env
                   labels:
                     - "traefik.enable=true"
-                    - "traefik.http.routers.$APP_NAME.rule=Host($APP_HOST)"
+                    - "traefik.http.routers.$APP_NAME.rule=Host(\"$APP_HOST\")"
                     - "traefik.http.routers.$APP_NAME.entrypoints=web"
+                    - "traefik.http.services.$APP_NAME.loadbalancer.server.port=3000"
               EOC
 
-              # FIX CLAVE (docker-compose viejo)
               docker-compose down --remove-orphans || true
               docker-compose up -d
 
