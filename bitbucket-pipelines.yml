@@ -7,6 +7,7 @@ pipelines:
           services:
             - docker
           script:
+            - apk add --no-cache git
             - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
             - chmod +x siroe-devops-scripts/siroe-apps.sh
             - sh siroe-devops-scripts/siroe-apps.sh
@@ -16,6 +17,7 @@ pipelines:
           services:
             - docker
           script:
+            - apk add --no-cache git
             - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
             - chmod +x siroe-devops-scripts/siroe-apps.sh
             - sh siroe-devops-scripts/siroe-apps.sh
@@ -25,6 +27,7 @@ pipelines:
           services:
             - docker
           script:
+            - apk add --no-cache git
             - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
             - chmod +x siroe-devops-scripts/siroe-apps.sh
             - sh siroe-devops-scripts/siroe-apps.sh
