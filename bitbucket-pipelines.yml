@@ -7,52 +7,46 @@ pipelines:
           services:
             - docker
           script:
-            - SSH_KEY_DECODED=$(printf "%s" "$SSH_KEY_BASE64" | base64 -d)
+            # reconstruir key desde base64
+            - printf "%s" "$SSH_KEY_BASE64" | base64 -d > key
+            - chmod 600 key
+
+            # build imagen
             - docker build -t siroe/$APP_NAME:latest .
+
+            # empaquetar
             - docker save siroe/$APP_NAME:latest | gzip > image.tar.gz
 
-            - pipe: atlassian/scp-deploy:0.3.3
-              variables:
-                USER: 'root'
-                SERVER: $SERVER
-                SSH_KEY: $SSH_KEY_DECODED
-                REMOTE_PATH: "/root/apps/$APP_NAME"
-                LOCAL_PATH: "image.tar.gz"
-                EXTRA_ARGS: "-o StrictHostKeyChecking=no"
+            # copiar al server (SCP manual)
+            - ssh -o StrictHostKeyChecking=no -i key root@$SERVER "mkdir -p /root/apps/$APP_NAME"
+            - scp -o StrictHostKeyChecking=no -i key image.tar.gz root@$SERVER:/root/apps/$APP_NAME/
 
-            - pipe: atlassian/ssh-run:0.4.1
-              variables:
-                SSH_USER: 'root'
-                SERVER: $SERVER
-                SSH_KEY: $SSH_KEY_DECODED
-                EXTRA_ARGS: "-o StrictHostKeyChecking=no"
-                COMMAND: |
-                  set -e
-                  mkdir -p /root/apps/$APP_NAME
-                  cd /root/apps/$APP_NAME
+            # ejecutar deploy remoto (SSH manual)
+            - |
+              ssh -o StrictHostKeyChecking=no -i key root@$SERVER << EOF
+              set -e
+              mkdir -p /root/apps/$APP_NAME
+              cd /root/apps/$APP_NAME
 
-                  echo "$ENV_FILE" > .env
-                  docker load < image.tar.gz
+              echo "$ENV_FILE" > .env
 
-                  cat > docker-compose.yml <<EOF
-                  version: "3.8"
+              docker load < image.tar.gz
 
-                  services:
-                    api:
-                      image: siroe/$APP_NAME:latest
-                      container_name: $APP_NAME
-                      restart: always
-                      env_file:
-                        - .env
-                      labels:
-                        - "traefik.enable=true"
-                        - "traefik.http.routers.$APP_NAME.rule=Host($APP_HOST)"
-                        - "traefik.http.routers.$APP_NAME.entrypoints=web"
-                  EOF
+              cat > docker-compose.yml <<EOC
+              version: "3.8"
 
-                  docker-compose up -d
+              services:
+                api:
+                  image: siroe/$APP_NAME:latest
+                  container_name: $APP_NAME
+                  restart: always
+                  env_file:
+                    - .env
+                  labels:
+                    - "traefik.enable=true"
+                    - "traefik.http.routers.$APP_NAME.rule=Host($APP_HOST)"
+                    - "traefik.http.routers.$APP_NAME.entrypoints=web"
+              EOC
 
-definitions:
-  services:
-    docker:
-      memory: 2048
+              docker-compose up -d
+              EOF
