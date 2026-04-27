@@ -7,9 +7,7 @@ pipelines:
           services:
             - docker
           script:
-            - echo "$SSH_KEY_BASE64" | wc -c
-            - echo "$SSH_KEY_BASE64" | base64 -d | head
-            - echo "$SSH_KEY_BASE64" | base64 -d > key
+            - printf "%s" "$SSH_KEY_BASE64" | base64 -d > key
             - chmod 600 key
             - docker build -t siroe/$APP_NAME:latest .
             - docker save siroe/$APP_NAME:latest | gzip > image.tar.gz
