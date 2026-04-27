@@ -1,0 +1,64 @@
+image: docker:20.10.24
+
+pipelines:
+  branches:
+    main:
+      - step:
+          services:
+            - docker
+          script:
+            # Build imagen
+            - docker build -t siroe/$APP_NAME:latest .
+
+            # Empaquetar imagen
+            - docker save siroe/$APP_NAME:latest | gzip > image.tar.gz
+
+            # Copiar al server
+            - pipe: atlassian/scp-deploy:0.3.3
+              variables:
+                USER: 'root'
+                SERVER: $SERVER
+                REMOTE_PATH: "/root/apps/$APP_NAME"
+                LOCAL_PATH: "image.tar.gz"
+
+            # Deploy remoto
+            - pipe: atlassian/ssh-run:0.4.1
+              variables:
+                SSH_USER: 'root'
+                SERVER: $SERVER
+                COMMAND: |
+                  set -e
+
+                  mkdir -p /root/apps/$APP_NAME
+                  cd /root/apps/$APP_NAME
+
+                  # Crear .env dinámico
+                  echo "$ENV_FILE" > .env
+
+                  # Cargar imagen
+                  docker load < image.tar.gz
+
+                  # Generar docker-compose dinámico
+                  cat <<EOF > docker-compose.yml
+version: "3.8"
+
+services:
+  api:
+    image: siroe/$APP_NAME:latest
+    container_name: $APP_NAME
+    restart: always
+    env_file:
+      - .env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.$APP_NAME.rule=Host(\`$APP_HOST\`)"
+      - "traefik.http.routers.$APP_NAME.entrypoints=web"
+EOF
+
+                  # Levantar contenedor
+                  docker-compose up -d
+
+definitions:
+  services:
+    docker:
+      memory: 2048
