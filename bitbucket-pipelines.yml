@@ -14,24 +14,29 @@ pipelines:
             # build imagen
             - docker build -t siroe/$APP_NAME:latest .
 
-            # empaquetar
+            # empaquetar imagen
             - docker save siroe/$APP_NAME:latest | gzip > image.tar.gz
 
-            # copiar al server (SCP manual)
+            # asegurar carpeta en server
             - ssh -o StrictHostKeyChecking=no -i key root@$SERVER "mkdir -p /root/apps/$APP_NAME"
+
+            # copiar imagen
             - scp -o StrictHostKeyChecking=no -i key image.tar.gz root@$SERVER:/root/apps/$APP_NAME/
 
-            # ejecutar deploy remoto (SSH manual)
+            # deploy remoto
             - |
               ssh -o StrictHostKeyChecking=no -i key root@$SERVER << EOF
               set -e
-              mkdir -p /root/apps/$APP_NAME
+
               cd /root/apps/$APP_NAME
 
+              # generar .env correctamente
               printf "%s" "$ENV_FILE_BASE64" | base64 -d > .env
 
+              # cargar imagen
               docker load < image.tar.gz
 
+              # generar docker-compose dinámico
               cat > docker-compose.yml <<EOC
               version: "3.8"
 
@@ -48,6 +53,8 @@ pipelines:
                     - "traefik.http.routers.$APP_NAME.entrypoints=web"
               EOC
 
+              # FIX CLAVE (docker-compose viejo)
+              docker-compose down --remove-orphans || true
               docker-compose up -d
+
               EOF
-              
