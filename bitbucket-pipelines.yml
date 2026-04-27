@@ -44,12 +44,17 @@ pipelines:
                   restart: always
                   env_file:
                     - .env
+                  networks:
+                    - traefik_default
                   labels:
                     - "traefik.enable=true"
                     - "traefik.http.routers.$APP_NAME.rule=Host(\"$APP_HOST\")"
                     - "traefik.http.routers.$APP_NAME.entrypoints=web"
                     - "traefik.http.services.$APP_NAME.loadbalancer.server.port=$APP_PORT"
                     - "traefik.docker.network=traefik_default"
+              networks:
+                traefik_default:
+                  external: true
               EOC
 
               docker-compose down --remove-orphans || true
