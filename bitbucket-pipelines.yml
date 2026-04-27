@@ -7,24 +7,24 @@ pipelines:
           services:
             - docker
           script:
-            - git clone https://bitbucket.org/siroe/siroe-deploy-scripts.git
-            - chmod +x siroe-deploy-scripts/siroe-apps.sh
-            - sh siroe-deploy-scripts/siroe-apps.sh
+            - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
+            - chmod +x siroe-devops-scripts/siroe-apps.sh
+            - sh siroe-devops-scripts/siroe-apps.sh
 
     develop:
       - step:
           services:
             - docker
           script:
-            - git clone https://bitbucket.org/siroe/siroe-deploy-scripts.git
-            - chmod +x siroe-deploy-scripts/siroe-apps.sh
-            - sh siroe-deploy-scripts/siroe-apps.sh
+            - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
+            - chmod +x siroe-devops-scripts/siroe-apps.sh
+            - sh siroe-devops-scripts/siroe-apps.sh
 
     "feature/**":
       - step:
           services:
             - docker
           script:
-            - git clone https://bitbucket.org/siroe/siroe-deploy-scripts.git
-            - chmod +x siroe-deploy-scripts/siroe-apps.sh
-            - sh siroe-deploy-scripts/siroe-apps.sh
+            - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
+            - chmod +x siroe-devops-scripts/siroe-apps.sh
+            - sh siroe-devops-scripts/siroe-apps.sh
