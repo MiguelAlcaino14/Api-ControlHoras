@@ -17,12 +17,14 @@ pipelines:
                 SSH_KEY: $SSH_KEY
                 REMOTE_PATH: "/root/apps/$APP_NAME"
                 LOCAL_PATH: "image.tar.gz"
+                EXTRA_ARGS: "-o StrictHostKeyChecking=no"
 
             - pipe: atlassian/ssh-run:0.4.1
               variables:
                 SSH_USER: 'root'
                 SERVER: $SERVER
                 SSH_KEY: $SSH_KEY
+                EXTRA_ARGS: "-o StrictHostKeyChecking=no"
                 COMMAND: |
                   set -e
                   mkdir -p /root/apps/$APP_NAME
