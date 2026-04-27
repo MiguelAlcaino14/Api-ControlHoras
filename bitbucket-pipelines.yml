@@ -47,11 +47,24 @@ pipelines:
                   networks:
                     - traefik_default
                   labels:
-                    - "traefik.enable=true"
-                    - "traefik.http.routers.$APP_NAME.rule=Host(\"$APP_HOST\")"
-                    - "traefik.http.routers.$APP_NAME.entrypoints=web"
-                    - "traefik.http.services.$APP_NAME.loadbalancer.server.port=$APP_PORT"
-                    - "traefik.docker.network=traefik_default"
+                      - "traefik.enable=true"
+                      - "traefik.docker.network=traefik_default"
+
+                      # HTTPS
+                      - "traefik.http.routers.$APP_NAME.rule=Host(\"$APP_HOST\")"
+                      - "traefik.http.routers.$APP_NAME.entrypoints=websecure"
+                      - "traefik.http.routers.$APP_NAME.tls=true"
+                      - "traefik.http.routers.$APP_NAME.tls.certresolver=le"
+
+                      # HTTP → HTTPS redirect
+                      - "traefik.http.routers.$APP_NAME-http.rule=Host(\"$APP_HOST\")"
+                      - "traefik.http.routers.$APP_NAME-http.entrypoints=web"
+                      - "traefik.http.routers.$APP_NAME-http.middlewares=redirect-https"
+
+                      - "traefik.http.middlewares.redirect-https.redirectscheme.scheme=https"
+
+                      # Puerto interno
+                      - "traefik.http.services.$APP_NAME.loadbalancer.server.port=$APP_PORT"
               networks:
                 traefik_default:
                   external: true
