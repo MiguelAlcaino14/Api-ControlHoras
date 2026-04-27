@@ -28,7 +28,7 @@ pipelines:
               mkdir -p /root/apps/$APP_NAME
               cd /root/apps/$APP_NAME
 
-              echo "$ENV_FILE" > .env
+              printf "%s" "$ENV_FILE_BASE64" | base64 -d > .env
 
               docker load < image.tar.gz
 
