@@ -7,70 +7,24 @@ pipelines:
           services:
             - docker
           script:
-            # reconstruir key desde base64
-            - printf "%s" "$SSH_KEY_BASE64" | base64 -d > key
-            - chmod 600 key
+            - git clone https://bitbucket.org/siroe/siroe-deploy-scripts.git
+            - chmod +x siroe-deploy-scripts/siroe-apps.sh
+            - sh siroe-deploy-scripts/siroe-apps.sh
 
-            # build imagen
-            - docker build --build-arg VITE_API_URL="$VITE_API_URL" -t siroe/$APP_NAME:latest .
+    develop:
+      - step:
+          services:
+            - docker
+          script:
+            - git clone https://bitbucket.org/siroe/siroe-deploy-scripts.git
+            - chmod +x siroe-deploy-scripts/siroe-apps.sh
+            - sh siroe-deploy-scripts/siroe-apps.sh
 
-            # empaquetar imagen
-            - docker save siroe/$APP_NAME:latest | gzip > image.tar.gz
-
-            # asegurar carpeta en server
-            - ssh -o StrictHostKeyChecking=no -i key root@$SERVER "mkdir -p /root/apps/$APP_NAME"
-
-            # copiar imagen
-            - scp -o StrictHostKeyChecking=no -i key image.tar.gz root@$SERVER:/root/apps/$APP_NAME/
-
-            # deploy remoto
-            - |
-              ssh -o StrictHostKeyChecking=no -i key root@$SERVER << EOF
-              set -e
-
-              cd /root/apps/$APP_NAME
-
-              printf "%s" "$ENV_FILE_BASE64" | base64 -d > .env
-
-              docker load < image.tar.gz
-
-              cat > docker-compose.yml <<EOC
-              version: "3.8"
-
-              services:
-                api:
-                  image: siroe/$APP_NAME:latest
-                  container_name: $APP_NAME
-                  restart: always
-                  env_file:
-                    - .env
-                  networks:
-                    - traefik_default
-                  labels:
-                      - "traefik.enable=true"
-                      - "traefik.docker.network=traefik_default"
-
-                      # HTTPS
-                      - "traefik.http.routers.$APP_NAME.rule=Host(\"$APP_HOST\")"
-                      - "traefik.http.routers.$APP_NAME.entrypoints=websecure"
-                      - "traefik.http.routers.$APP_NAME.tls=true"
-                      - "traefik.http.routers.$APP_NAME.tls.certresolver=le"
-
-                      # HTTP → HTTPS redirect
-                      - "traefik.http.routers.$APP_NAME-http.rule=Host(\"$APP_HOST\")"
-                      - "traefik.http.routers.$APP_NAME-http.entrypoints=web"
-                      - "traefik.http.routers.$APP_NAME-http.middlewares=redirect-https"
-
-                      - "traefik.http.middlewares.redirect-https.redirectscheme.scheme=https"
-
-                      # Puerto interno
-                      - "traefik.http.services.$APP_NAME.loadbalancer.server.port=$APP_PORT"
-              networks:
-                traefik_default:
-                  external: true
-              EOC
-
-              docker-compose down --remove-orphans || true
-              docker-compose up -d
-
-              EOF
+    "feature/**":
+      - step:
+          services:
+            - docker
+          script:
+            - git clone https://bitbucket.org/siroe/siroe-deploy-scripts.git
+            - chmod +x siroe-deploy-scripts/siroe-apps.sh
+            - sh siroe-deploy-scripts/siroe-apps.sh
