@@ -7,6 +7,8 @@ pipelines:
           services:
             - docker
           script:
+            - echo "$SSH_KEY_BASE64" | base64 -d > key
+            - chmod 600 key
             - docker build -t siroe/$APP_NAME:latest .
             - docker save siroe/$APP_NAME:latest | gzip > image.tar.gz
 
@@ -14,7 +16,7 @@ pipelines:
               variables:
                 USER: 'root'
                 SERVER: $SERVER
-                SSH_KEY: $SSH_KEY
+                SSH_KEY: key
                 REMOTE_PATH: "/root/apps/$APP_NAME"
                 LOCAL_PATH: "image.tar.gz"
                 EXTRA_ARGS: "-o StrictHostKeyChecking=no"
@@ -23,7 +25,7 @@ pipelines:
               variables:
                 SSH_USER: 'root'
                 SERVER: $SERVER
-                SSH_KEY: $SSH_KEY
+                SSH_KEY: key
                 EXTRA_ARGS: "-o StrictHostKeyChecking=no"
                 COMMAND: |
                   set -e
