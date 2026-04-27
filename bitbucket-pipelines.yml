@@ -8,7 +8,7 @@ pipelines:
             - docker
           script:
             - apk add --no-cache git
-            - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
+            - git clone https://x-token-auth:$BB_TOKEN@bitbucket.org/siroe/siroe-devops-scripts.git
             - chmod +x siroe-devops-scripts/siroe-apps.sh
             - sh siroe-devops-scripts/siroe-apps.sh
 
@@ -18,7 +18,7 @@ pipelines:
             - docker
           script:
             - apk add --no-cache git
-            - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
+            - git clone https://x-token-auth:$BB_TOKEN@bitbucket.org/siroe/siroe-devops-scripts.git
             - chmod +x siroe-devops-scripts/siroe-apps.sh
             - sh siroe-devops-scripts/siroe-apps.sh
 
@@ -28,6 +28,6 @@ pipelines:
             - docker
           script:
             - apk add --no-cache git
-            - git clone https://bitbucket.org/siroe/siroe-devops-scripts.git
+            - git clone https://x-token-auth:$BB_TOKEN@bitbucket.org/siroe/siroe-devops-scripts.git
             - chmod +x siroe-devops-scripts/siroe-apps.sh
             - sh siroe-devops-scripts/siroe-apps.sh
