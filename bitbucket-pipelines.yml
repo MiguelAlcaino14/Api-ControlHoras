@@ -2,7 +2,7 @@ image: docker:20.10.24
 
 pipelines:
   branches:
-    main:
+    master:
       - step:
           services:
             - docker
