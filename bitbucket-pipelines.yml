@@ -50,3 +50,4 @@ pipelines:
 
               docker-compose up -d
               EOF
+              
