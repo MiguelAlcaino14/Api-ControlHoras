@@ -48,7 +48,7 @@ pipelines:
                     - "traefik.enable=true"
                     - "traefik.http.routers.$APP_NAME.rule=Host(\"$APP_HOST\")"
                     - "traefik.http.routers.$APP_NAME.entrypoints=web"
-                    - "traefik.http.services.$APP_NAME.loadbalancer.server.port=3000"
+                    - "traefik.http.services.$APP_NAME.loadbalancer.server.port=$APP_PORT"
               EOC
 
               docker-compose down --remove-orphans || true
