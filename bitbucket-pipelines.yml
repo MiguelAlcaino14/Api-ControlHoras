@@ -12,7 +12,7 @@ pipelines:
             - chmod 600 key
 
             # build imagen
-            - docker build -t siroe/$APP_NAME:latest .
+            - docker build --build-arg VITE_API_URL="$VITE_API_URL" -t siroe/$APP_NAME:latest .
 
             # empaquetar imagen
             - docker save siroe/$APP_NAME:latest | gzip > image.tar.gz
