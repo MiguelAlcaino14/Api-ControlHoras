@@ -17,18 +17,12 @@ definitions:
         artifacts:
           - key
 
-    - step: &build
-        name: Build
+    - step:
+        name: Build + Package
         services:
           - docker
         script:
           - sh siroe-devops-scripts/droplets/02-build.sh
-
-    - step: &package
-        name: Package
-        services:
-          - docker
-        script:
           - sh siroe-devops-scripts/droplets/03-package.sh
         artifacts:
           - image.tar.gz
