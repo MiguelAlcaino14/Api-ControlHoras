@@ -17,7 +17,7 @@ definitions:
         artifacts:
           - key
 
-    - step:
+    - step: &build_package
         name: Build + Package
         services:
           - docker
@@ -37,20 +37,17 @@ pipelines:
     master:
       - step: *clone_scripts
       - step: *prepare
-      - step: *build
-      - step: *package
+      - step: *build_package
       - step: *deploy
 
     develop:
       - step: *clone_scripts
       - step: *prepare
-      - step: *build
-      - step: *package
+      - step: *build_package
       - step: *deploy
 
     "feature/**":
       - step: *clone_scripts
       - step: *prepare
-      - step: *build
-      - step: *package
+      - step: *build_package
       - step: *deploy
