@@ -1,0 +1,53 @@
+image: docker:20.10.24
+
+definitions:
+  steps:
+    - step: &clone_scripts
+        name: Clone DevOps Scripts
+        script:
+          - apk add --no-cache git
+          - git clone https://x-token-auth:$BB_TOKEN@bitbucket.org/siroe/siroe-devops-scripts.git
+        artifacts:
+          - siroe-devops-scripts/**
+
+    - step: &prepare
+        name: Prepare
+        script:
+          - sh siroe-devops-scripts/droplets/01-prepare.sh
+        artifacts:
+          - key
+
+    - step: &build_package
+        name: Build + Package
+        services:
+          - docker
+        script:
+          - sh siroe-devops-scripts/droplets/02-build.sh
+          - sh siroe-devops-scripts/droplets/03-package.sh
+        artifacts:
+          - image.tar.gz
+
+    - step: &deploy
+        name: Deploy
+        script:
+          - sh siroe-devops-scripts/droplets/04-deploy.sh
+
+pipelines:
+  branches:
+    master:
+      - step: *clone_scripts
+      - step: *prepare
+      - step: *build_package
+      - step: *deploy
+
+    develop:
+      - step: *clone_scripts
+      - step: *prepare
+      - step: *build_package
+      - step: *deploy
+
+    "feature/**":
+      - step: *clone_scripts
+      - step: *prepare
+      - step: *build_package
+      - step: *deploy

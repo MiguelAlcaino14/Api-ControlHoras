@@ -12,12 +12,13 @@ import entriesRouter from './routes/entries.js';
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet());
 
 // CORS restringido a orígenes permitidos
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:3000')
-  .split(',').map(o => o.trim());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5174,http://localhost:3000').split(',').map(o => o.trim());
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -48,4 +49,5 @@ app.get('/api/health', (_req, res) => {
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`API Control Horas corriendo en puerto ${PORT}`);
+  console.log(`allowedOrigins: ${allowedOrigins.join(', ')}`);
 });
