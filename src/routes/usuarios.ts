@@ -9,7 +9,7 @@ const router = Router();
 router.get('/', authMiddleware, adminOnly, async (_req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(
-      'SELECT id, nombre, email, rol, activo, is_released, released_at, fecha_creacion FROM usuarios ORDER BY fecha_creacion DESC'
+      'SELECT id, nombre, email, rol, activo, is_released, released_at, fecha_creacion, horas_mensuales FROM usuarios ORDER BY fecha_creacion DESC'
     );
     return res.status(200).json(result.rows);
   } catch (err: any) {
@@ -101,6 +101,37 @@ router.put('/:id', authMiddleware, adminOnly, async (req: AuthRequest, res: Resp
     }
 
     return res.status(200).json(result.rows[0]);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/usuarios/:id/horas-mensuales - Actualizar horas mensuales estándar (admin)
+router.put('/:id/horas-mensuales', authMiddleware, adminOnly, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const { horas_mensuales } = req.body;
+
+  if (!horas_mensuales || isNaN(Number(horas_mensuales)) || Number(horas_mensuales) <= 0) {
+    return res.status(400).json({ error: 'horas_mensuales debe ser un número positivo' });
+  }
+
+  try {
+    await pool.query(
+      'UPDATE usuarios SET horas_mensuales = $1 WHERE id = $2',
+      [horas_mensuales, id]
+    );
+
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+
+    await pool.query(
+      `INSERT INTO monthly_hours (user_id, month, total_hours, used_hours, rollover_hours)
+       VALUES ($1, $2, $3, 0, 0)
+       ON CONFLICT (user_id, month) DO UPDATE SET total_hours = $3, updated_at = NOW()`,
+      [id, month, horas_mensuales]
+    );
+
+    return res.status(200).json({ ok: true, horas_mensuales });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

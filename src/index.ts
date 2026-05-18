@@ -9,6 +9,7 @@ import usuariosRouter from './routes/usuarios.js';
 import profilesRouter from './routes/profiles.js';
 import managementRouter from './routes/management.js';
 import entriesRouter from './routes/entries.js';
+import uploadRouter from './routes/upload.js';
 
 const app = express();
 
@@ -29,7 +30,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
 app.use(express.json());
@@ -40,6 +41,7 @@ app.use('/api/usuarios', usuariosRouter);
 app.use('/api/profiles', profilesRouter);
 app.use('/api/management', managementRouter);
 app.use('/api/time', entriesRouter);
+app.use('/api/upload', uploadRouter);
 
 // Health check
 app.get('/api/health', (_req, res) => {

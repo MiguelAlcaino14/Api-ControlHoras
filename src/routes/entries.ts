@@ -68,7 +68,8 @@ router.post('/entries', authMiddleware, async (req: AuthRequest, res: Response) 
     project_id, client_id, fecha, asunto, servicio,
     estado, hh, caso, proyecto, complejidad,
     compania, razon, categoria, solicitante,
-    horas_utilizadas, fecha_creacion, fecha_solucion
+    horas_utilizadas, fecha_creacion, fecha_solucion, tema,
+    medio_contacto, emergencia, observaciones, adjuntos
   } = req.body;
 
   try {
@@ -77,14 +78,16 @@ router.post('/entries', authMiddleware, async (req: AuthRequest, res: Response) 
         user_id, project_id, client_id, fecha, asunto, servicio,
         estado, hh, caso, proyecto, complejidad,
         compania, razon, categoria, solicitante,
-        horas_utilizadas, fecha_creacion, fecha_solucion
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+        horas_utilizadas, fecha_creacion, fecha_solucion, tema,
+        medio_contacto, emergencia, observaciones, adjuntos
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
       RETURNING *`,
       [
         req.user!.id, project_id || null, client_id || null, fecha, asunto, servicio,
         estado || 'abierto', hh || 0, caso, proyecto, complejidad || 'media',
         compania || '', razon || '', categoria || '', solicitante || '',
-        horas_utilizadas || 0, fecha_creacion || null, fecha_solucion || null
+        horas_utilizadas || 0, fecha_creacion || null, fecha_solucion || null, tema || '',
+        medio_contacto || '', emergencia || false, observaciones || '', JSON.stringify(adjuntos || [])
       ]
     );
     return res.status(201).json(result.rows[0]);
@@ -100,7 +103,8 @@ router.put('/entries/:id', authMiddleware, async (req: AuthRequest, res: Respons
     project_id, client_id, fecha, asunto, servicio,
     estado, hh, caso, proyecto, complejidad,
     compania, razon, categoria, solicitante,
-    horas_utilizadas, fecha_creacion, fecha_solucion
+    horas_utilizadas, fecha_creacion, fecha_solucion, tema,
+    medio_contacto, emergencia, observaciones, adjuntos
   } = req.body;
 
   try {
@@ -130,19 +134,44 @@ router.put('/entries/:id', authMiddleware, async (req: AuthRequest, res: Respons
         horas_utilizadas = COALESCE($15, horas_utilizadas),
         fecha_creacion = COALESCE($16, fecha_creacion),
         fecha_solucion = COALESCE($17, fecha_solucion),
+        tema = COALESCE($18, tema),
+        medio_contacto = COALESCE($19, medio_contacto),
+        emergencia = COALESCE($20, emergencia),
+        observaciones = COALESCE($21, observaciones),
+        adjuntos = COALESCE($22, adjuntos),
         updated_at = NOW()
-      WHERE id = $18
+      WHERE id = $23
       RETURNING *`,
       [
         project_id, client_id, fecha, asunto, servicio,
         estado, hh, caso, proyecto, complejidad,
         compania, razon, categoria, solicitante,
-        horas_utilizadas, fecha_creacion, fecha_solucion, id
+        horas_utilizadas, fecha_creacion, fecha_solucion, tema,
+        medio_contacto, emergencia,
+        observaciones,
+        adjuntos !== undefined ? JSON.stringify(adjuntos) : undefined,
+        id
       ]
     );
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Entrada no encontrada' });
     return res.status(200).json(result.rows[0]);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/time/entries/:id - Eliminar time entry
+router.delete('/entries/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  try {
+    if (req.user!.rol !== 'admin') {
+      const check = await pool.query('SELECT user_id FROM time_entries WHERE id = $1', [id]);
+      if (check.rows.length === 0) return res.status(404).json({ error: 'Entrada no encontrada' });
+      if (check.rows[0].user_id !== req.user!.id) return res.status(403).json({ error: 'No autorizado' });
+    }
+    await pool.query('DELETE FROM time_entries WHERE id = $1', [id]);
+    return res.status(200).json({ ok: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
