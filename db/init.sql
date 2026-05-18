@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS usuarios (
   activo BOOLEAN NOT NULL DEFAULT true,
   is_released BOOLEAN NOT NULL DEFAULT false,
   released_at TIMESTAMPTZ,
-  fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT now()
+  fecha_creacion TIMESTAMPTZ NOT NULL DEFAULT now(),
+  horas_mensuales NUMERIC NOT NULL DEFAULT 120
 );
 
 COMMENT ON COLUMN usuarios.rol IS 'Valores válidos: admin, dev, usuario';
@@ -70,6 +71,11 @@ CREATE TABLE IF NOT EXISTS time_entries (
   horas_utilizadas NUMERIC NOT NULL DEFAULT 0,
   fecha_creacion DATE,
   fecha_solucion DATE,
+  tema TEXT NOT NULL DEFAULT '',
+  medio_contacto TEXT NOT NULL DEFAULT '',
+  emergencia BOOLEAN NOT NULL DEFAULT false,
+  observaciones TEXT NOT NULL DEFAULT '',
+  adjuntos JSONB NOT NULL DEFAULT '[]',
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

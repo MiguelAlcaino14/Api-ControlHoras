@@ -17,23 +17,25 @@ router.get('/', authMiddleware, adminOnly, async (_req: AuthRequest, res: Respon
   }
 });
 
-// GET /api/usuarios/monthly-summary - Resumen mensual de todos (admin)
+// GET /api/usuarios/monthly-summary - Resumen del mes actual por usuario (admin)
 router.get('/monthly-summary', authMiddleware, adminOnly, async (_req: AuthRequest, res: Response) => {
   try {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         u.id, u.nombre, u.email, u.rol, u.activo,
-        COALESCE(json_agg(
-          json_build_object(
-            'month', mh.month,
-            'total_hours', mh.total_hours,
-            'used_hours', mh.used_hours,
-            'rollover_hours', mh.rollover_hours
-          ) ORDER BY mh.month DESC
-        ) FILTER (WHERE mh.id IS NOT NULL), '[]') AS monthly_hours
+        u.horas_mensuales,
+        COALESCE(mh.total_hours, 0)    AS total_hours,
+        COALESCE(mh.used_hours, 0)     AS used_hours,
+        COALESCE(mh.rollover_hours, 0) AS rollover_hours,
+        GREATEST(0,
+          COALESCE(mh.total_hours, 0)
+          + COALESCE(mh.rollover_hours, 0)
+          - COALESCE(mh.used_hours, 0)
+        ) AS available_hours
       FROM usuarios u
-      LEFT JOIN monthly_hours mh ON mh.user_id = u.id
-      GROUP BY u.id, u.nombre, u.email, u.rol, u.activo
+      LEFT JOIN monthly_hours mh
+        ON mh.user_id = u.id
+        AND mh.month = date_trunc('month', CURRENT_DATE)::date
       ORDER BY u.nombre
     `);
     return res.status(200).json(result.rows);
