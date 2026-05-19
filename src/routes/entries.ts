@@ -83,8 +83,8 @@ router.post('/entries', authMiddleware, async (req: AuthRequest, res: Response) 
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
       RETURNING *`,
       [
-        req.user!.id, project_id || null, client_id || null, fecha, asunto, servicio,
-        estado || 'abierto', hh || 0, caso, proyecto, complejidad || 'media',
+        req.user!.id, project_id || null, client_id || null, fecha || null, asunto || '', servicio || '',
+        estado || 'abierto', hh || 0, caso || '', proyecto || '', complejidad || 'media',
         compania || '', razon || '', categoria || '', solicitante || '',
         horas_utilizadas || 0, fecha_creacion || null, fecha_solucion || null, tema || '',
         medio_contacto || '', emergencia || false, observaciones || '', JSON.stringify(adjuntos || [])
